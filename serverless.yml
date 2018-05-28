@@ -1,0 +1,54 @@
+service: ${self:custom.naming.fullDashName}
+provider:
+  name: aws
+  runtime: nodejs8.10
+  region: ${env:AWS_REGION, 'us-west-2'}
+  memorySize: 128
+  timeout: 10
+  stage: ${self:custom.stage}
+plugins:
+- serverless-webpack
+- serverless-offline
+- serverless-apigw-binary
+- serverless-apigwy-binary
+custom:
+  # Naming Conventions
+  naming:
+    fullName: HttpProxy
+    fullDashName: http-proxy-service
+    shortName: http-proxy
+  # API Gateway Binary Support
+  apigwBinary:
+    types:
+      - '*/*'
+  # API Gateway Custom Domains
+  customDomain:
+    domainName: ${env:API_DOMAIN}
+    stage: ${self:custom.stage}
+    basePath: ${env:API_BASEPATH, self:custom.stage}
+    certificateName: ${env:API_CERT_NAME}
+    createRoute53Record: ${env:API_CREATE_ROUTE53, 'true'}
+    endpointType: ${env:API_ENDPOINT_TYPE, 'edge'}
+  stage: ${env:API_STAGE, 'staging'}
+  webpackIncludeModules: true
+resources:
+  Resources:
+    ApiGatewayRestApi:
+      Type: AWS::ApiGateway::RestApi
+      Properties:
+        # API Gateway Name
+        Name: ${env:API_NAME, self:custom.naming.fullName}
+functions:
+  proxyHandler:
+    # Lambda Function Name
+    name: ${self:custom.naming.fullName}Service
+    # Lambda Function Description
+    description: ${self:custom.naming.fullName} Handler
+    # Lambda Handler
+    handler: src/handlers/proxy.default
+    # API Gateway Configuration
+    events:
+    - http:
+        path: execute
+        method: any
+        contentHandling: CONVERT_TO_BINARY
